@@ -205,6 +205,22 @@ class NBNDProcessor {
 EOT;
     return $issue_mods;
   }
+  /**
+   * Generate the JP2 surrogate.
+   *
+   * Arguments were taken from defaults in islandora_solution_pack_large_image.
+   */
+  private function generateJp2() {
+    $this->announce('Generating JP2');
+
+    $args = '-rate 0.5 Clayers=1 Clevels=7 "Cprecincts={256,256},{256,256},{256,256},{128,128},{128,128},{64,64},{64,64},{32,32},{16,16}" "Corder=RPCL" "ORGgen_plt=yes" "ORGtparts=R" "Cblk={32,32}" Cuse_sop=yes';
+    exec(
+      'kdu_compress' .
+      ' -i ' . $this->curWorkFile .
+      ' -o ' . $this->curPageDir . '/JP2.jp2 ' .
+      $args
+    );
+  }
 
   /**
    * Generate the JPEG surrogate.
@@ -291,6 +307,7 @@ EOT;
         $this->generateObject();
         $this->generateJpeg();
         $this->generateTn();
+        $this->generateJp2();
       }
       else {
         while ($cur_page < (int) $page_number) {
