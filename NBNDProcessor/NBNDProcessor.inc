@@ -55,6 +55,13 @@ class NBNDProcessor {
   public $targetPath = NULL;
 
   /**
+   * The TIF formatted surrogate from the JPG input.
+   *
+   * @var string
+   */
+  public $tifSurrogate = NULL;
+
+  /**
    * Constructor.
    *
    * @param string $metadata_path
@@ -216,7 +223,7 @@ EOT;
     $args = '-rate 0.5 Clayers=1 Clevels=7 "Cprecincts={256,256},{256,256},{256,256},{128,128},{128,128},{64,64},{64,64},{32,32},{16,16}" "Corder=RPCL" "ORGgen_plt=yes" "ORGtparts=R" "Cblk={32,32}" Cuse_sop=yes';
     exec(
       'kdu_compress' .
-      ' -i ' . $this->curWorkFile .
+      ' -i ' . $this->tifSurrogate .
       ' -o ' . $this->curPageDir . '/JP2.jp2 ' .
       $args
     );
@@ -245,6 +252,21 @@ EOT;
       ' ' .
       $this->curPageDir . '/OBJ.jpg'
     );
+  }
+
+  /**
+   * Copy the object file original.
+   */
+  private function generateTifSurrogate() {
+    $this->announce('Generating TIFF Surrogate');
+    $temp_file = tempnam(sys_get_temp_dir(), 'surrogate.tif');
+    exec(
+      'convert ' .
+      $this->curWorkFile .
+      ' -compress none ' .
+      $temp_file . '.tif'
+    );
+    $this->tifSurrogate = $temp_file . '.tif';
   }
 
   /**
@@ -305,9 +327,10 @@ EOT;
         $this->curPageDir = $page_dir;
         $this->curWorkFile = "$this->pagesDirectory/$page_file";
         $this->generateObject();
+        $this->generateTifSurrogate();
+        $this->generateJp2();
         $this->generateJpeg();
         $this->generateTn();
-        $this->generateJp2();
       }
       else {
         while ($cur_page < (int) $page_number) {
