@@ -255,11 +255,23 @@ EOT;
   }
 
   /**
+   * Generate the OCR surrogate.
+   */
+  private function generateOCR() {
+    $this->announce('Generating OCR');
+    exec(
+      'tesseract' . ' ' .
+      $this->tifSurrogate . ' ' .
+      $this->curPageDir . '/OCR -l eng'
+    );
+  }
+
+  /**
    * Copy the object file original.
    */
   private function generateTifSurrogate() {
     $this->announce('Generating TIFF Surrogate');
-    $temp_file = tempnam(sys_get_temp_dir(), 'surrogate.tif');
+    $temp_file = tempnam(sys_get_temp_dir(), 'surrogate');
     exec(
       'convert ' .
       $this->curWorkFile .
@@ -328,6 +340,7 @@ EOT;
         $this->curWorkFile = "$this->pagesDirectory/$page_file";
         $this->generateObject();
         $this->generateTifSurrogate();
+        $this->generateOCR();
         $this->generateJp2();
         $this->generateJpeg();
         $this->generateTn();
