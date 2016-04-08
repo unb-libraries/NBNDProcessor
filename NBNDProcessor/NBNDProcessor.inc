@@ -32,13 +32,6 @@ class NBNDProcessor {
   public $curWorkFile = NULL;
 
   /**
-   * The path to the metadata.php file.
-   *
-   * @var string
-   */
-  public $metadataPath = NULL;
-
-  /**
    * The TIF formatted surrogate for OCR.
    *
    * @var string
@@ -46,11 +39,11 @@ class NBNDProcessor {
   public $hocrSurrogate = NULL;
 
   /**
-   * The directory containing the source page files.
+   * The path to the metadata.php file.
    *
    * @var string
    */
-  public $pagesDirectory = NULL;
+  public $metadataPath = NULL;
 
   /**
    * The pages in the issue.
@@ -58,6 +51,13 @@ class NBNDProcessor {
    * @var array
    */
   public $pages = array();
+
+  /**
+   * The directory containing the source page files.
+   *
+   * @var string
+   */
+  public $pagesDirectory = NULL;
 
   /**
    * The target path to write the issue output.
@@ -224,6 +224,36 @@ class NBNDProcessor {
 EOT;
     return $issue_mods;
   }
+
+  /**
+   * Generate the OCR surrogate.
+   */
+  private function generateHocr() {
+    $this->announce('Generating HOCR');
+    exec(
+      'ulimit -t ' . NBNDPROCESSOR_TESSERACT_TIMEOUT . ' ; tesseract ' .
+      $this->hocrSurrogate . ' ' .
+      $this->curPageDir . '/HOCR -l ' . NBNDPROCESSOR_TESSERACT_LANGUAGE . ' hocr'
+    );
+  }
+
+  /**
+   * Copy the object file original.
+   */
+  private function generateHocrSurrogate() {
+    $this->announce('Generating HOCR Surrogate');
+    $temp_file = tempnam(sys_get_temp_dir(), 'HOCRsurrogate');
+    exec(
+      'gm convert ' .
+      $this->curWorkFile .
+      ' ' .
+      NBNDPROCESSOR_HOCR_SURROGATE_ARGS .
+      ' ' .
+      $temp_file . '.tif'
+    );
+    $this->hocrSurrogate = $temp_file . '.tif';
+  }
+
   /**
    * Generate the JP2 surrogate.
    *
@@ -267,19 +297,7 @@ EOT;
   /**
    * Generate the OCR surrogate.
    */
-  private function generateHOCR() {
-    $this->announce('Generating HOCR');
-    exec(
-      'ulimit -t ' . NBNDPROCESSOR_TESSERACT_TIMEOUT . ' ; tesseract ' .
-      $this->hocrSurrogate . ' ' .
-      $this->curPageDir . '/HOCR -l ' . NBNDPROCESSOR_TESSERACT_LANGUAGE . ' hocr'
-    );
-  }
-
-  /**
-   * Generate the OCR surrogate.
-   */
-  private function generateOCR() {
+  private function generateOcr() {
     $this->announce('Distilling OCR from HOCR');
     $hocr_data = file_get_contents($this->curPageDir . '/HOCR.hocr');
     $hocr_xml = new DOMDocument();
@@ -303,23 +321,6 @@ EOT;
       $temp_file . '.tif'
     );
     $this->tifSurrogate = $temp_file . '.tif';
-  }
-
-  /**
-   * Copy the object file original.
-   */
-  private function generateHOCRSurrogate() {
-    $this->announce('Generating HOCR Surrogate');
-    $temp_file = tempnam(sys_get_temp_dir(), 'HOCRsurrogate');
-    exec(
-      'gm convert ' .
-      $this->curWorkFile .
-      ' ' .
-      NBNDPROCESSOR_HOCR_SURROGATE_ARGS .
-      ' ' .
-      $temp_file . '.tif'
-    );
-    $this->hocrSurrogate = $temp_file . '.tif';
   }
 
   /**
@@ -381,9 +382,9 @@ EOT;
         $this->curWorkFile = "$this->pagesDirectory/$page_file";
         $this->generateObject();
         $this->generateTifSurrogate();
-        $this->generateHOCRSurrogate();
-        $this->generateHOCR();
-        $this->generateOCR();
+        $this->generateHocrSurrogate();
+        $this->generateHocr();
+        $this->generateOcr();
         $this->generateJp2();
         $this->generateJpeg();
         $this->generateTn();
