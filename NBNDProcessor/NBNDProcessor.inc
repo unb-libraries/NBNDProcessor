@@ -4,8 +4,13 @@
  * Process newspaper issue pages into the islandora newspaper batch format.
  */
 
+define('NBNDPROCESSOR_HOCR_SURROGATE_ARGS', '-colorspace Gray -threshold 50% -depth 1 +compress');
 define('NBNDPROCESSOR_ISLANDORA_JPG_SIZE', '600x800');
 define('NBNDPROCESSOR_ISLANDORA_TN_SIZE', '150x200');
+define('NBNDPROCESSOR_ISSUE_NUMBER_LENGTH', 3);
+define('NBNDPROCESSOR_KAKADU_ARGS', '-rate 0.5 Clayers=1 Clevels=7 "Cprecincts={256,256},{256,256},{256,256},{128,128},{128,128},{64,64},{64,64},{32,32},{16,16}" "Corder=RPCL" "ORGgen_plt=yes" "ORGtparts=R" "Cblk={32,32}" Cuse_sop=yes');
+define('NBNDPROCESSOR_TESSERACT_LANGUAGE', 'eng');
+define('NBNDPROCESSOR_TESSERACT_TIMEOUT', 600);
 
 /**
  * A generic object to process files from a newspaper issue.
@@ -227,12 +232,10 @@ EOT;
   private function generateJp2() {
     $this->announce('Generating JP2');
 
-    $args = '-rate 0.5 Clayers=1 Clevels=7 "Cprecincts={256,256},{256,256},{256,256},{128,128},{128,128},{64,64},{64,64},{32,32},{16,16}" "Corder=RPCL" "ORGgen_plt=yes" "ORGtparts=R" "Cblk={32,32}" Cuse_sop=yes';
     exec(
-      'kdu_compress' .
-      ' -i ' . $this->tifSurrogate .
+      'kdu_compress  -i ' . $this->tifSurrogate .
       ' -o ' . $this->curPageDir . '/JP2.jp2 ' .
-      $args
+      NBNDPROCESSOR_KAKADU_ARGS
     );
   }
 
@@ -267,10 +270,9 @@ EOT;
   private function generateHOCR() {
     $this->announce('Generating HOCR');
     exec(
-      'ulimit -t 600 ; ' .
-      'tesseract' . ' ' .
+      'ulimit -t ' . NBNDPROCESSOR_TESSERACT_TIMEOUT . ' ; tesseract ' .
       $this->hocrSurrogate . ' ' .
-      $this->curPageDir . '/HOCR -l eng hocr'
+      $this->curPageDir . '/HOCR -l ' . NBNDPROCESSOR_TESSERACT_LANGUAGE . ' hocr'
     );
   }
 
@@ -312,7 +314,9 @@ EOT;
     exec(
       'gm convert ' .
       $this->curWorkFile .
-      ' -colorspace Gray -threshold 50% -depth 1 +compress ' .
+      ' ' .
+      NBNDPROCESSOR_HOCR_SURROGATE_ARGS .
+      ' ' .
       $temp_file . '.tif'
     );
     $this->hocrSurrogate = $temp_file . '.tif';
@@ -445,7 +449,7 @@ EOT;
    *   The formatted page number.
    */
   private function stylePageNumber($page_number) {
-    return str_pad($page_number, 3, "0", STR_PAD_LEFT);
+    return str_pad($page_number, NBNDPROCESSOR_ISSUE_NUMBER_LENGTH, "0", STR_PAD_LEFT);
   }
 
 }
