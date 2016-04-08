@@ -4,8 +4,8 @@
  * Process newspaper issue pages into the islandora newspaper batch format.
  */
 
-define('ISLANDORA_JPG_SIZE', '600x800');
-define('ISLANDORA_TN_SIZE', '150x200');
+define('NBNDPROCESSOR_ISLANDORA_JPG_SIZE', '600x800');
+define('NBNDPROCESSOR_ISLANDORA_TN_SIZE', '150x200');
 
 /**
  * A generic object to process files from a newspaper issue.
@@ -243,7 +243,7 @@ EOT;
     $this->announce('Generating JPG');
     $this->resizeCrop(
       $this->curPageDir . '/JPG.jpg',
-      ISLANDORA_JPG_SIZE,
+      NBNDPROCESSOR_ISLANDORA_JPG_SIZE,
       'North'
     );
   }
@@ -325,7 +325,7 @@ EOT;
     $this->announce('Generating TN');
     $this->resizeCrop(
       $this->curPageDir . '/TN.jpg',
-      ISLANDORA_TN_SIZE,
+      NBNDPROCESSOR_ISLANDORA_TN_SIZE,
       'North'
     );
   }
