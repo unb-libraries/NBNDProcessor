@@ -34,6 +34,13 @@ class NBNDProcessor {
   public $metadataPath = NULL;
 
   /**
+   * The TIF formatted surrogate for OCR.
+   *
+   * @var string
+   */
+  public $hocrSurrogate = NULL;
+
+  /**
    * The directory containing the source page files.
    *
    * @var string
@@ -257,13 +264,28 @@ EOT;
   /**
    * Generate the OCR surrogate.
    */
-  private function generateOCR() {
-    $this->announce('Generating OCR');
+  private function generateHOCR() {
+    $this->announce('Generating HOCR');
     exec(
+      'ulimit -t 600 ; ' .
       'tesseract' . ' ' .
-      $this->tifSurrogate . ' ' .
-      $this->curPageDir . '/OCR -l eng'
+      $this->hocrSurrogate . ' ' .
+      $this->curPageDir . '/HOCR -l eng hocr'
     );
+  }
+
+  /**
+   * Generate the OCR surrogate.
+   */
+  private function generateOCR() {
+    $this->announce('Distilling OCR from HOCR');
+    $hocr_data = file_get_contents($this->curPageDir . '/HOCR.hocr');
+    $hocr_xml = new DOMDocument();
+    $is_loaded = $hocr_xml->loadXML($hocr_data);
+    if ($is_loaded) {
+      $raw_ocr = strip_tags($hocr_xml->saveHTML());
+      file_put_contents($this->curPageDir . '/OCR.txt', $raw_ocr);
+    }
   }
 
   /**
@@ -271,7 +293,7 @@ EOT;
    */
   private function generateTifSurrogate() {
     $this->announce('Generating TIFF Surrogate');
-    $temp_file = tempnam(sys_get_temp_dir(), 'surrogate');
+    $temp_file = tempnam(sys_get_temp_dir(), 'TIFsurrogate');
     exec(
       'convert ' .
       $this->curWorkFile .
@@ -279,6 +301,21 @@ EOT;
       $temp_file . '.tif'
     );
     $this->tifSurrogate = $temp_file . '.tif';
+  }
+
+  /**
+   * Copy the object file original.
+   */
+  private function generateHOCRSurrogate() {
+    $this->announce('Generating HOCR Surrogate');
+    $temp_file = tempnam(sys_get_temp_dir(), 'HOCRsurrogate');
+    exec(
+      'gm convert ' .
+      $this->curWorkFile .
+      ' -colorspace Gray -threshold 50% -depth 1 +compress ' .
+      $temp_file . '.tif'
+    );
+    $this->hocrSurrogate = $temp_file . '.tif';
   }
 
   /**
@@ -340,10 +377,13 @@ EOT;
         $this->curWorkFile = "$this->pagesDirectory/$page_file";
         $this->generateObject();
         $this->generateTifSurrogate();
+        $this->generateHOCRSurrogate();
+        $this->generateHOCR();
         $this->generateOCR();
         $this->generateJp2();
         $this->generateJpeg();
         $this->generateTn();
+        $this->removeSurrogates();
       }
       else {
         while ($cur_page < (int) $page_number) {
@@ -357,6 +397,15 @@ EOT;
       $cur_page++;
     }
 
+  }
+
+  /**
+   * Setup and evaluate the issue constants.
+   */
+  private function removeSurrogates() {
+    $this->announce('Removing Surrogates');
+    unlink($this->tifSurrogate);
+    unlink($this->hocrSurrogate);
   }
 
   /**
