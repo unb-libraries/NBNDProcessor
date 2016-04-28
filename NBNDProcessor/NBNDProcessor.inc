@@ -309,6 +309,32 @@ EOT;
   }
 
   /**
+   * Generate and return the MODS file content for a page.
+   *
+   * @param string $page_number
+   *   The page number to insert into the title string.
+   *
+   * @return string
+   *   The MODS file content.
+   */
+  private function generatePageMods($page_number) {
+    $issue_title_date_string = date('F j, Y', ISSUE_DATE);
+    $issue_supp_title = ISSUE_SUPPLEMENT_TITLE;
+    $issue_title = ISSUE_TITLE . ", $issue_title_date_string" . trim(" " . $issue_supp_title);
+    $page_title = "$issue_title, Page $page_number";
+
+    $page_mods = <<<EOT
+<?xml version="1.0" encoding="UTF-8"?>
+<mods:mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns="http://www.loc.gov/mods/v3">
+  <mods:titleInfo>
+    <mods:title>$page_title</mods:title>
+  </mods:titleInfo>
+</mods:mods>
+EOT;
+    return $page_mods;
+  }
+
+  /**
    * Copy the object file original.
    */
   private function generateTifSurrogate() {
@@ -390,6 +416,12 @@ EOT;
         $this->generateTn();
         $this->renameHocr();
         $this->removeSurrogates();
+
+        // Generate page MODS.
+        file_put_contents(
+          $this->curPageDir . '/MODS.xml',
+          $this->generatePageMods($cur_page)
+        );
       }
       else {
         while ($cur_page < (int) $page_number) {
@@ -397,6 +429,13 @@ EOT;
           $page_dir = $this->targetPath . '/' . $this->stylePageNumber($cur_page);
           exec('mkdir -p ' . $page_dir);
           exec('cp ' . dirname(__FILE__) . '/missing/* ' . $page_dir);
+
+          // Generate page MODS.
+          file_put_contents(
+            $page_dir . '/MODS.xml',
+            $this->generatePageMods($cur_page)
+          );
+
           $cur_page++;
         }
       }
