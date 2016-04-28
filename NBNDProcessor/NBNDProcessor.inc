@@ -388,6 +388,7 @@ EOT;
         $this->generateJp2();
         $this->generateJpeg();
         $this->generateTn();
+        $this->renameHocr();
         $this->removeSurrogates();
       }
       else {
@@ -411,6 +412,13 @@ EOT;
     $this->announce('Removing Surrogates');
     unlink($this->tifSurrogate);
     unlink($this->hocrSurrogate);
+  }
+
+  /**
+   * Rename the HOCR file to an html extension for islandora ingest.
+   */
+  private function renameHocr() {
+    rename($this->curPageDir . '/HOCR.hocr', $this->curPageDir . '/HOCR.html');
   }
 
   /**
